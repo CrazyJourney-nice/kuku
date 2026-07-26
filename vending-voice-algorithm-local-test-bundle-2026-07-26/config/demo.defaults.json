@@ -1,0 +1,56 @@
+{
+  "camera": {
+    "index": 0,
+    "width": 1280,
+    "height": 720,
+    "fps": 30
+  },
+  "attention": {
+    "face_confidence_min": 0.6,
+    "face_width_for_gaze_px": 90,
+    "head_candidate_error_deg": 28,
+    "gaze_confirmation_error_deg": 18,
+    "valid_dwell_ms": 800,
+    "head_only_dwell_ms": 1400,
+    "fast_lateral_motion_norm_s": 0.25,
+    "exit_hold_ms": 400,
+    "loss_grace_ms": 500,
+    "track_ttl_ms": 600,
+    "winner_margin": 0.15,
+    "winner_hold_ms": 500,
+    "eye_settle_ms": 300,
+    "max_faces": 4
+  },
+  "proximity": {
+    "interaction_roi": [0.15, 0.05, 0.7, 0.9],
+    "enter_face_width_ratio": 0.16,
+    "exit_face_width_ratio": 0.12,
+    "enter_dwell_ms": 700,
+    "exit_dwell_ms": 900,
+    "smoothing_alpha": 0.35,
+    "edge_margin_ratio": 0.02,
+    "face_confidence_min": 0.6
+  },
+  "voice_journey": {
+    "followup_dwell_ms": 15000
+  },
+  "scoring": {
+    "direction": 0.4,
+    "dwell": 0.25,
+    "face_quality": 0.15,
+    "stability": 0.15,
+    "centrality": 0.05
+  },
+  "voice": {
+    "muted": true,
+    "proximity_clip_id": "proximity_greeting",
+    "followup_clip_id": "attention_follow_up",
+    "path": "demo_assets/audio/welcome.wav"
+  },
+  "runtime": {
+    "bind_host": "127.0.0.1",
+    "port": 8765,
+    "jpeg_quality": 76,
+    "stale_after_ms": 300
+  }
+}

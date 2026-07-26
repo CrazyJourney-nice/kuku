@@ -49,6 +49,8 @@ import {
   type RecoverySnapshot,
 } from "@/src/infrastructure/persistence/SessionSnapshotStore";
 import { KioskLogger } from "@/src/infrastructure/telemetry/kioskLogger";
+import { LocalVisionPrivacyBar } from "@/src/features/localVision/LocalVisionPrivacyBar";
+import { useLocalVisionVoice } from "@/src/features/localVision/useLocalVisionVoice";
 
 type RestoreEvent = {
   type: "RESTORE_SNAPSHOT";
@@ -817,6 +819,7 @@ function OutOfServiceScreen({
 
 export function KioskApp() {
   const [context, send] = useReducer(appReducer, undefined, createInitialContext);
+  const localVision = useLocalVisionVoice();
   const [resetPrompt, setResetPrompt] = useState(false);
   const [idleWarning, setIdleWarning] = useState(false);
   const [pickupRemaining, setPickupRemaining] = useState<number | null>(null);
@@ -1221,10 +1224,19 @@ export function KioskApp() {
           size={mascot.size}
           speech={mascot.speech}
           targetId={`kuku-slot-${context.screen}`}
+          lookTarget={localVision.lookTarget}
+          lookCommandId={localVision.commandId}
+          onEyesSettled={localVision.reportEyesSettled}
         />
         <ScreenTransitionDeck screenKey={context.screen}>
           {screen}
         </ScreenTransitionDeck>
+        <LocalVisionPrivacyBar
+          status={localVision.status}
+          voiceBusy={localVision.voiceBusy}
+          voiceMuted={localVision.voiceMuted}
+          onToggleVoice={() => void localVision.toggleVoice()}
+        />
         {idleWarning ? <div className="idle-toast" role="status">{copy.idle.warning}</div> : null}
         {resetPrompt ? (
           <div className="fault-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-title">

@@ -1,0 +1,37 @@
+{
+  "name": "vending-visual-voice-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node scripts/run-e2e.mjs --project=webkit-safari",
+    "test:e2e:all": "node scripts/run-e2e.mjs",
+    "test:e2e:chrome": "node scripts/run-e2e.mjs --project=chromium",
+    "test:e2e:safari": "node scripts/run-e2e.mjs --project=webkit-safari",
+    "test:e2e:install:safari": "playwright install webkit",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "3.1.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.54.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "24.0.15",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "@vitejs/plugin-react": "4.6.0",
+    "jsdom": "26.1.0",
+    "typescript": "5.8.3",
+    "vite": "7.0.6",
+    "vitest": "3.2.4"
+  }
+}

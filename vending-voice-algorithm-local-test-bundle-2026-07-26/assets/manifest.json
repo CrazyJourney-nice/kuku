@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "face_landmarker",
+      "path": "models/face_landmarker.task",
+      "source_url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+      "license": "Apache-2.0",
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+      "required": true
+    },
+    {
+      "id": "gaze_estimation",
+      "path": "models/gaze-estimation-adas-0002.xml",
+      "source_url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/1/gaze-estimation-adas-0002/FP16/gaze-estimation-adas-0002.xml",
+      "license": "Apache-2.0",
+      "sha256": "b0648e6f6efa1437f13e5a4c137e7824a9aa8e80c6b93e82e592ce3f1b8eef43",
+      "required": true
+    },
+    {
+      "id": "gaze_estimation_weights",
+      "path": "models/gaze-estimation-adas-0002.bin",
+      "source_url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/1/gaze-estimation-adas-0002/FP16/gaze-estimation-adas-0002.bin",
+      "license": "Apache-2.0",
+      "sha256": "dfa42c854ec43e0da6aacf34ea6729019edebd39124b6897323488d6fe8fb01e",
+      "required": true
+    },
+    {
+      "id": "voice_welcome",
+      "path": "demo_assets/audio/welcome.wav",
+      "source_url": "locally-generated",
+      "license": "Project-local demo asset",
+      "sha256": "36353f615faa8c7f3499f2bac0801593e546a4f52bf4d0eaeca73c80b19162d4",
+      "required": true
+    }
+  ]
+}

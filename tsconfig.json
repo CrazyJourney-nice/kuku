@@ -33,6 +33,7 @@
   ],
   "exclude": [
     "node_modules",
+    "Kuku_Coffee_Kiosk_Deliverable_*",
     "vending-voice-algorithm-local-test-bundle-*"
   ]
 }
