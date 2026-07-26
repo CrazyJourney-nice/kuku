@@ -116,7 +116,15 @@ export function useLocalVisionVoice() {
       try {
         const health = await localRequest<RuntimeHealth>("/health");
         if (disposed) return;
-        setVoiceMuted(health.voice_muted ?? true);
+        // This UI always starts silent, even if another local client left the
+        // shared runtime unmuted during an earlier session.
+        if (health.voice_muted === false) {
+          await localRequest("/api/voice/mute", {
+            method: "POST",
+            body: JSON.stringify({ muted: true }),
+          });
+        }
+        setVoiceMuted(true);
         if (health.status !== "RUNNING") {
           await localRequest("/api/mode", {
             method: "POST",
@@ -150,6 +158,8 @@ export function useLocalVisionVoice() {
         body: JSON.stringify({ muted: nextMuted }),
       });
       setVoiceMuted(nextMuted);
+    } catch {
+      setStatus("unavailable");
     } finally {
       setVoiceBusy(false);
     }
