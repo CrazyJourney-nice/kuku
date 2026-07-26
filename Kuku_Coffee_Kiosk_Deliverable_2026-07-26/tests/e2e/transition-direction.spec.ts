@@ -27,18 +27,14 @@ test("next screens enter from the right and previous screens enter from the left
 }) => {
   await page.goto("/");
   await expect(page.getByTestId("screen-impact")).toBeVisible();
-  await expect(page.getByTestId("start-intro")).toBeEnabled();
+  await expect(page.getByTestId("start-order-direct")).toBeEnabled();
 
   // A burst must advance exactly one screen, never skip visible content.
-  await page.getByTestId("start-intro").evaluate((button) => {
+  await page.getByTestId("start-order-direct").evaluate((button) => {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       (button as HTMLButtonElement).click();
     }
   });
-  await expectCurrentScreen(page, "welcome", "forward");
-
-  await expect(page.getByTestId("start-order")).toBeEnabled();
-  await page.getByTestId("start-order").click();
   await expectCurrentScreen(page, "drink", "forward");
 
   await page.getByTestId("drink-latte").click();

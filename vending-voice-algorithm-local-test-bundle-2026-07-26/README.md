@@ -9,8 +9,9 @@ Live camera
 → face-scale proximity
 → OpenCV head pose + OpenVINO gaze
 → attention and visual target decisions
-→ mascot eyes + two-stage local voice
-→ local React interface
+→ MessagePack telemetry
+→ linked Rive mascot eyes/body + two-stage local voice
+→ local side-by-side React interface
 ```
 
 The project contains no face recognition, identity matching, cloud inference,
@@ -19,17 +20,25 @@ dispensing controls.
 
 ## Core behaviour
 
-- The mascot eyes acquire the first stable face after 250ms.
-- The local preview, overlays and mascot horizontal target are mirrored
+- The visual target acquires the first stable face after 250ms; the selected
+  anonymous face centre drives the mascot.
+- Mascot eyes respond first (~100ms) and the body follows with slower damping
+  (~350ms), producing an eye-lead/body-follow turn.
+- The local preview, overlays and Rive mascot direction are mirrored
   together; inference continues to use the original camera frame.
+- A lost face target returns the whole mascot smoothly to neutral.
 - A lost visual target is held for 500ms before a stable handoff.
 - Proximity uses smoothed normalized face width, not physical distance.
 - Entering the near zone for 700ms triggers `PROXIMITY_GREETING`.
-- The same near target continuously attending for 15 seconds triggers
+- The same near target continuously attending for 10 seconds triggers
   `ATTENTION_FOLLOW_UP`.
 - Each stage is consumed once per near-zone interaction.
 - Sound starts muted and can be explicitly enabled in the UI.
-- Both stages currently use the bundled local `welcome.wav`.
+- The proximity stage uses `proximity_greeting.wav`.
+- The 10-second follow-up uses `quick_buy_prompt.wav`; the Kuku host plays it
+  exactly when the visitor enters page two.
+- `order_thanks.wav` is bundled for a kiosk host to trigger after confirmed
+  order acceptance; this standalone visual demo does not infer purchases.
 
 ## Requirements
 
@@ -87,8 +96,10 @@ installed Safari application.
 - `backend/app/decision.py` — proximity, attention, target and voice decisions.
 - `backend/app/runtime.py` — Live frame pipeline and MessagePack telemetry.
 - `backend/app/api.py` — localhost health, session, sound and WebSocket API.
-- `frontend/src/` — focused camera, eyes, sound and status UI.
+- `frontend/src/` — side-by-side camera, face-linked mascot, sound and
+  status UI.
+- `frontend/public/mascot-tracking-pilot-v1.riv` — local mascot runtime asset.
 - `models/` — bundled local MediaPipe and OpenVINO models.
-- `demo_assets/audio/` — bundled local placeholder voice file.
+- `demo_assets/audio/` — three project-provided local voice files.
 
 See `docs/architecture.md` and `docs/known-limitations.md`.

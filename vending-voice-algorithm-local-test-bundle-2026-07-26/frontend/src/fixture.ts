@@ -21,7 +21,7 @@ export function makeFixturePacket(frameId = 1842): DemoFramePacket {
     voice_journey:{
       interaction_id:"proximity-42",state:"FOLLOWED_UP",triggered_stage:null,
       proximity_greeting_triggered:false,attention_followup_triggered:false,
-      completed_stages:["PROXIMITY_GREETING","ATTENTION_FOLLOW_UP"],attention_dwell_ms:15000
+      completed_stages:["PROXIMITY_GREETING","ATTENTION_FOLLOW_UP"],attention_dwell_ms:10000
     },
     trigger_reason:"VALID_ATTENTION", rejection_reason:"GAZE_OUTSIDE_ROI",
     stage_latency_ms:{capture:4.1,face:16.8,tracking:1.6,head_pose:2.4,gaze:28.3,decision:.9,frame_age:68.1},

@@ -13,9 +13,8 @@ test("@soak repeats complete sessions without leaving DOM growth", async ({
   let baselineNodes: number | null = null;
   for (let cycle = 0; cycle < cycles; cycle += 1) {
     await page.goto("/");
-    await page.getByTestId("start-intro").click();
-    await expect(page.getByTestId("start-order")).toBeEnabled();
-    await page.getByTestId("start-order").click();
+    await page.getByTestId("start-order-direct").click();
+    await expect(page.getByTestId("screen-drink")).toBeVisible();
     await page.getByTestId("drink-americano").click();
     await page.getByTestId("continue-customize").click();
     await expect(page.getByTestId("continue-confirm")).toBeEnabled();

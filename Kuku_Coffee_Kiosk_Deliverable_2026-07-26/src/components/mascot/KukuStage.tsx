@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   SliceAsset,
   type SliceCrop,
 } from "@/src/components/media/SliceAsset";
+import type { MascotLookTarget } from "./MascotRenderer";
 import { StaticMascotRenderer } from "./StaticMascotRenderer";
+import { TrackedMascotEyes } from "./TrackedMascotEyes";
 
 export type MascotCue =
   | "idle"
@@ -23,11 +31,42 @@ export type MascotCue =
   | "concern"
   | "tap-delight";
 
+export const DRINK_SCREEN_MASCOT_CUE: MascotCue = "approve";
+
+export type MascotInteractionKind = "selection" | "approval";
+
+export type MascotInteractionCommand = {
+  id: number;
+  kind: MascotInteractionKind;
+};
+
+export const AMBIENT_INTERACTION_MIN_MS = 8_000;
+export const AMBIENT_INTERACTION_MAX_MS = 14_000;
+
+export function getAmbientInteractionDelay(
+  random: () => number = Math.random,
+): number {
+  const ratio = Math.min(1, Math.max(0, random()));
+  return Math.round(
+    AMBIENT_INTERACTION_MIN_MS +
+      ratio * (AMBIENT_INTERACTION_MAX_MS - AMBIENT_INTERACTION_MIN_MS),
+  );
+}
+
 type KukuStageProps = {
   cue: MascotCue;
   size?: "compact" | "medium" | "hero";
   speech?: string;
+  sleeping?: boolean;
+  interaction?: MascotInteractionCommand | null;
   onTap?: () => void;
+  lookTarget?: MascotLookTarget;
+  lookCommandId?: string | null;
+  onEyesSettled?: (commandId: string) => void;
+  trackedEyesEnabled?: boolean;
+  trackedEyesFollowEnabled?: boolean;
+  trackedEyesOpening?: boolean;
+  trackedEyesArtworkCover?: boolean;
 };
 
 const mascotCrops: Record<MascotCue, SliceCrop> = {
@@ -163,10 +202,22 @@ export function KukuStage({
   cue,
   size = "medium",
   speech,
+  sleeping = false,
+  interaction = null,
   onTap,
+  lookTarget = null,
+  lookCommandId = null,
+  onEyesSettled,
+  trackedEyesEnabled = true,
+  trackedEyesFollowEnabled = true,
+  trackedEyesOpening = false,
+  trackedEyesArtworkCover,
 }: KukuStageProps) {
   const [temporaryCue, setTemporaryCue] = useState<MascotCue | null>(null);
+  const [interactionCycle, setInteractionCycle] = useState(0);
   const restoreTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastInteractionCommandId = useRef<number | null>(null);
+  const mascotButtonRef = useRef<HTMLButtonElement | null>(null);
   const [renderer] = useState(() => new StaticMascotRenderer());
 
   useEffect(() => {
@@ -183,30 +234,140 @@ export function KukuStage({
     renderer.setCue(temporaryCue ?? cue);
   }, [cue, renderer, temporaryCue]);
 
-  const delight = () => {
-    if (cue === "concern") return;
+  useEffect(() => {
+    renderer.setLookTarget(lookTarget);
+  }, [lookTarget, renderer]);
+
+  const delight = useCallback(() => {
+    if (cue === "concern" || sleeping || trackedEyesOpening) return;
     setTemporaryCue("tap-delight");
+    setInteractionCycle((cycle) => cycle + 1);
     onTap?.();
     if (restoreTimer.current) clearTimeout(restoreTimer.current);
-    restoreTimer.current = setTimeout(() => setTemporaryCue(null), 720);
-  };
+    restoreTimer.current = setTimeout(() => {
+      restoreTimer.current = null;
+      setTemporaryCue(null);
+    }, 720);
+  }, [cue, onTap, sleeping, trackedEyesOpening]);
+
+  useEffect(() => {
+    if (
+      !interaction ||
+      interaction.id === lastInteractionCommandId.current
+    ) {
+      return;
+    }
+    lastInteractionCommandId.current = interaction.id;
+    mascotButtonRef.current?.click();
+  }, [interaction]);
+
+  useEffect(() => {
+    if (!sleeping && !trackedEyesOpening) return;
+    if (restoreTimer.current) {
+      clearTimeout(restoreTimer.current);
+      restoreTimer.current = null;
+    }
+    setTemporaryCue(null);
+  }, [sleeping, trackedEyesOpening]);
+
+  useEffect(() => {
+    if (sleeping || trackedEyesOpening) return;
+    const timer = setTimeout(() => {
+      mascotButtonRef.current?.click();
+    }, getAmbientInteractionDelay());
+    return () => clearTimeout(timer);
+  }, [interactionCycle, sleeping, trackedEyesOpening]);
+
+  const delighting = temporaryCue === "tap-delight";
+  const artworkCoverEnabled =
+    trackedEyesArtworkCover ?? !trackedEyesOpening;
 
   const stage = (
     <div
       className={`kuku-stage kuku-stage--${size}`}
       data-cue={temporaryCue ?? cue}
+      data-vision-tracking={
+        trackedEyesEnabled && lookTarget ? "true" : "false"
+      }
+      data-eye-state={
+        trackedEyesEnabled
+          ? trackedEyesOpening
+            ? "opening"
+            : "open"
+          : "closed"
+      }
+      data-sleeping={sleeping ? "true" : "false"}
+      data-interaction={
+        temporaryCue === "tap-delight" ? "tap-delight" : "idle"
+      }
     >
       <button
+        ref={mascotButtonRef}
         type="button"
         className="kuku"
         aria-label="和 Kuku 打个招呼"
         onClick={delight}
       >
-        <SliceAsset
-          crop={mascotCrops[temporaryCue ?? cue]}
-          alt="Kuku 咖啡助手"
-          fallbackKind="mascot"
-        />
+        <span className="kuku-artwork-stack">
+          <span
+            className="kuku-artwork-layer kuku-artwork-layer--base"
+            data-active={delighting ? "false" : "true"}
+            data-artwork-layer="base"
+            aria-hidden={delighting ? "true" : undefined}
+          >
+            <SliceAsset
+              key={cue}
+              crop={mascotCrops[cue]}
+              alt="Kuku 咖啡助手"
+              decoding="sync"
+              fallbackKind="mascot"
+            />
+            {trackedEyesEnabled ? (
+              <TrackedMascotEyes
+                active={!delighting}
+                artworkCoverEnabled={artworkCoverEnabled}
+                cue={cue}
+                lookTarget={lookTarget}
+                commandId={delighting ? null : lookCommandId}
+                movementEnabled={trackedEyesFollowEnabled}
+                opening={!delighting && trackedEyesOpening}
+                onSettled={delighting ? undefined : onEyesSettled}
+                testId={delighting ? null : "mascot-tracked-eyes"}
+              />
+            ) : null}
+          </span>
+          <span
+            className="kuku-artwork-layer kuku-artwork-layer--delight"
+            data-active={delighting ? "true" : "false"}
+            data-artwork-layer="delight"
+            aria-hidden={delighting ? undefined : "true"}
+          >
+            <SliceAsset
+              crop={mascotCrops["tap-delight"]}
+              alt=""
+              decoding="sync"
+              fallbackKind="mascot"
+            />
+            {trackedEyesEnabled ? (
+              <TrackedMascotEyes
+                active={delighting}
+                artworkCoverEnabled={artworkCoverEnabled}
+                cue="tap-delight"
+                lookTarget={lookTarget}
+                commandId={delighting ? lookCommandId : null}
+                movementEnabled={trackedEyesFollowEnabled}
+                opening={delighting && trackedEyesOpening}
+                onSettled={delighting ? onEyesSettled : undefined}
+                testId={delighting ? "mascot-tracked-eyes" : null}
+              />
+            ) : null}
+          </span>
+        </span>
+        {sleeping ? (
+          <span className="kuku-sleep-mark" aria-hidden="true">
+            Zzz
+          </span>
+        ) : null}
       </button>
       {speech ? (
         <p className="kuku-speech" aria-live="polite">

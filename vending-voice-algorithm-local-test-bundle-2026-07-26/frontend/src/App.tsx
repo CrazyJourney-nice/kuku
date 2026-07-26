@@ -134,13 +134,13 @@ export default function App() {
             <h1>{open ? "Face tracking is live." : "Face tracking demo."}</h1>
             <p>
               {open
-                ? "Move in front of the MacBook camera. The mascot eyes follow the first stable face target."
-                : "Press Open demo to start the camera, face tracking and mascot eyes."}
+                ? "Move in front of the MacBook camera. Your face position drives the mascot eyes and body in real time."
+                : "Press Open demo to start the camera, face tracking and linked mascot animation."}
             </p>
           </div>
           <div className="fixed-logic">
             <span>FIXED DEMO LOGIC</span>
-            <strong>First stable face · automatic eye tracking · two-stage local voice</strong>
+            <strong>Live camera · face-linked mascot animation · two-stage local voice</strong>
           </div>
         </section>
         <section className={`simple-stage-grid ${open ? "is-open" : "is-closed"}`}>
@@ -188,7 +188,7 @@ export default function App() {
               </span>
             )}
             <span>
-              Eyes target{" "}
+              Mascot target{" "}
               {packet?.visual_target_id === null || packet?.visual_target_id === undefined
                 ? "waiting"
                 : `T${packet.visual_target_id}`}

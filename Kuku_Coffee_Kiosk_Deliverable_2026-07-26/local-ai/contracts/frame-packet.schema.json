@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "frame-packet.schema.json",
+  "title": "DemoFramePacket",
+  "type": "object",
+  "required": [
+    "frame_id",
+    "source_timestamp_ms",
+    "processed_timestamp_ms",
+    "mode",
+    "image_jpeg",
+    "tracks",
+    "selected_target_id",
+    "visual_target_id",
+    "visual_target_reason",
+    "attention_state",
+    "proximity",
+    "voice_journey",
+    "mascot_state",
+    "voice_event",
+    "trigger_reason",
+    "rejection_reason",
+    "stage_latency_ms",
+    "fps",
+    "dropped_frames",
+    "queue_depth",
+    "stale_fields"
+  ],
+  "properties": {
+    "frame_id": { "type": "integer", "minimum": 0 },
+    "source_timestamp_ms": { "type": "number", "minimum": 0 },
+    "processed_timestamp_ms": { "type": "number", "minimum": 0 },
+    "mode": { "const": "LIVE" },
+    "image_jpeg": {
+      "description": "MessagePack binary payload containing a local JPEG.",
+      "contentMediaType": "image/jpeg"
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "track_id",
+          "bbox",
+          "face_confidence",
+          "face_width_px",
+          "raw_head_pose",
+          "filtered_head_pose",
+          "gaze",
+          "motion",
+          "dwell_ms",
+          "attention_score",
+          "state",
+          "reason",
+          "selected",
+          "stale"
+        ],
+        "properties": {
+          "track_id": { "type": "integer", "minimum": 1 },
+          "bbox": {
+            "description": "Normalized x, y, width, height.",
+            "type": "array",
+            "prefixItems": [
+              { "type": "number" },
+              { "type": "number" },
+              { "type": "number" },
+              { "type": "number" }
+            ],
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "face_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "face_width_px": { "type": "number", "minimum": 0 },
+          "raw_head_pose": { "$ref": "#/$defs/vector3OrNull" },
+          "filtered_head_pose": { "$ref": "#/$defs/vector3OrNull" },
+          "gaze": { "$ref": "#/$defs/vector2OrNull" },
+          "motion": { "type": "number" },
+          "dwell_ms": { "type": "number", "minimum": 0 },
+          "attention_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "state": { "type": "string" },
+          "reason": { "type": "string" },
+          "selected": { "type": "boolean" },
+          "stale": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "selected_target_id": { "type": ["integer", "null"] },
+    "visual_target_id": { "type": ["integer", "null"] },
+    "visual_target_reason": { "type": "string" },
+    "attention_state": {
+      "enum": [
+        "NO_TARGET",
+        "TRACKING",
+        "QUALIFYING",
+        "ATTENDING",
+        "GROUP_ATTENTION",
+        "LOST",
+        "CROWD_SAFE",
+        "FAULT"
+      ]
+    },
+    "proximity": {
+      "type": "object",
+      "required": [
+        "state",
+        "track_id",
+        "face_width_ratio",
+        "entered",
+        "episode_id",
+        "reason"
+      ],
+      "properties": {
+        "state": {
+          "enum": ["UNKNOWN", "FAR", "APPROACHING", "NEAR", "LEAVING"]
+        },
+        "track_id": { "type": ["integer", "null"], "minimum": 1 },
+        "face_width_ratio": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "entered": { "type": "boolean" },
+        "episode_id": { "type": ["string", "null"] },
+        "reason": {
+          "enum": [
+            "NO_FACE",
+            "OUTSIDE_INTERACTION_ZONE",
+            "FACE_EDGE_CROPPED",
+            "LOW_FACE_CONFIDENCE",
+            "STALE_RESULT",
+            "BELOW_ENTER_THRESHOLD",
+            "ENTER_DWELL_PENDING",
+            "NEAR_ENTERED",
+            "NEAR_HELD",
+            "EXIT_DWELL_PENDING",
+            "ZONE_CLEARED",
+            "FAULT"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "voice_journey": {
+      "type": "object",
+      "required": [
+        "interaction_id",
+        "state",
+        "triggered_stage",
+        "proximity_greeting_triggered",
+        "attention_followup_triggered",
+        "completed_stages",
+        "attention_dwell_ms"
+      ],
+      "properties": {
+        "interaction_id": { "type": ["string", "null"] },
+        "state": {
+          "enum": ["IDLE", "GREETED", "FOLLOWED_UP"]
+        },
+        "triggered_stage": {
+          "enum": [
+            "PROXIMITY_GREETING",
+            "ATTENTION_FOLLOW_UP",
+            null
+          ]
+        },
+        "proximity_greeting_triggered": { "type": "boolean" },
+        "attention_followup_triggered": { "type": "boolean" },
+        "completed_stages": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "PROXIMITY_GREETING",
+              "ATTENTION_FOLLOW_UP"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "attention_dwell_ms": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "mascot_state": {
+      "type": "object",
+      "required": [
+        "command_id",
+        "target",
+        "moving",
+        "settled",
+        "started_at_ms",
+        "settled_at_ms"
+      ],
+      "properties": {
+        "command_id": { "type": ["string", "null"] },
+        "target": { "$ref": "#/$defs/vector2" },
+        "moving": { "type": "boolean" },
+        "settled": { "type": "boolean" },
+        "started_at_ms": { "type": ["number", "null"], "minimum": 0 },
+        "settled_at_ms": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "voice_event": {
+      "type": "object",
+      "required": ["event_id", "status", "clip_id", "episode_id", "played_at_ms"],
+      "properties": {
+        "event_id": { "type": ["string", "null"] },
+        "status": {
+          "enum": [
+            "NONE",
+            "MUTED",
+            "PENDING",
+            "PLAYED",
+            "SUPPRESSED",
+            "UNAVAILABLE"
+          ]
+        },
+        "clip_id": { "type": ["string", "null"] },
+        "episode_id": { "type": ["string", "null"] },
+        "played_at_ms": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "trigger_reason": { "type": ["string", "null"] },
+    "rejection_reason": { "type": ["string", "null"] },
+    "stage_latency_ms": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "fps": {
+      "type": "object",
+      "required": ["capture", "processed"],
+      "properties": {
+        "capture": { "type": "number", "minimum": 0 },
+        "processed": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "dropped_frames": { "type": "integer", "minimum": 0 },
+    "queue_depth": { "type": "integer", "minimum": 0, "maximum": 1 },
+    "stale_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "vector2": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "vector2OrNull": {
+      "anyOf": [
+        { "$ref": "#/$defs/vector2" },
+        { "type": "null" }
+      ]
+    },
+    "vector3OrNull": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["yaw", "pitch", "roll"],
+          "properties": {
+            "yaw": { "type": "number" },
+            "pitch": { "type": "number" },
+            "roll": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

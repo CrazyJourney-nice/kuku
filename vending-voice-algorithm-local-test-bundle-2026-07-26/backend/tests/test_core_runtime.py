@@ -41,6 +41,13 @@ def test_core_api_exposes_live_and_sound_only(monkeypatch):
     monkeypatch.setattr(
         runtime, "start", lambda mode=Mode.LIVE: {"started": True}
     )
+    monkeypatch.setattr(
+        runtime,
+        "play_configured_clip",
+        lambda clip_id: VoiceEvent(
+            "host-event", "PLAYED", clip_id, None
+        ),
+    )
     with TestClient(DemoAPI(runtime).create_app()) as client:
         assert client.post(
             "/api/session/start", json={"mode": "LIVE"}
@@ -48,6 +55,15 @@ def test_core_api_exposes_live_and_sound_only(monkeypatch):
         assert client.post(
             "/api/voice/mute", json={"muted": False}
         ).json() == {"muted": False}
+        assert client.post(
+            "/api/voice/play", json={"clip_id": "quick_buy_prompt"}
+        ).json()["clip_id"] == "quick_buy_prompt"
+        assert client.post(
+            "/api/voice/play", json={"clip_id": "unconfigured"}
+        ).status_code == 422
+        assert client.post(
+            "/api/voice/cancel-followup"
+        ).json() == {"cancelled": True}
         assert client.get("/api/replays").status_code == 404
         assert client.post(
             "/api/machine/event", json={"type": "RESET"}
@@ -136,3 +152,32 @@ def test_audio_output_records_play_timestamp(tmp_path):
     ):
         assert output.play_once(event).status == "PLAYED"
     assert output.last_played_at_ms is not None
+
+
+def test_audio_output_routes_all_configured_clips(tmp_path):
+    clips = {
+        clip_id: tmp_path / f"{clip_id}.wav"
+        for clip_id in (
+            "proximity_greeting",
+            "quick_buy_prompt",
+            "order_thanks",
+        )
+    }
+    for path in clips.values():
+        path.write_bytes(b"RIFF")
+    output = LocalAfplayVoiceOutput(clips)
+    fake = SimpleNamespace(poll=lambda: 0, terminate=lambda: None)
+    with (
+        patch("app.outputs.shutil.which", return_value="/usr/bin/afplay"),
+        patch(
+            "app.outputs.subprocess.Popen", return_value=fake
+        ) as popen,
+    ):
+        for index, clip_id in enumerate(clips):
+            event = VoiceEvent(
+                f"event-{index}", "PENDING", clip_id, "episode"
+            )
+            assert output.play_once(event).status == "PLAYED"
+    assert [call.args[0][1] for call in popen.call_args_list] == [
+        str(path.resolve()) for path in clips.values()
+    ]

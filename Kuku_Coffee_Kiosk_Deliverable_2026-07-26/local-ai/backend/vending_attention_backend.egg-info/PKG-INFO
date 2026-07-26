@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: vending-attention-backend
+Version: 0.1.0
+Requires-Python: <3.13,>=3.11
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn[standard]<1,>=0.30
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: scipy<2,>=1.12
+Requires-Dist: opencv-contrib-python<6,>=5
+Requires-Dist: mediapipe<0.11,>=0.10.35
+Requires-Dist: openvino<2027,>=2026
+Requires-Dist: msgpack<2,>=1.1
+Provides-Extra: test
+Requires-Dist: pytest<10,>=9; extra == "test"
+Requires-Dist: httpx<1,>=0.27; extra == "test"

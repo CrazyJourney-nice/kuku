@@ -1,4 +1,4 @@
-# Kuku Coffee 七屏售货机前端
+# Kuku Coffee 一体化智能售货机
 
 面向 1080×1920 竖屏触控咖啡售货机的单页应用。产品严格按以下顺序运行：
 
@@ -7,16 +7,35 @@
 → 制作中 → 取杯完成 → 欢迎
 ```
 
-七个页面均为真实 React 组件，不使用整屏切片热点。核心业务由纯 TypeScript 状态机驱动，机器协议隔离在 `MachineAdapter`，开发环境使用确定性的 `MockMachineAdapter`。
+七个页面均为真实 React 组件，不使用整屏切片热点。核心业务由纯 TypeScript 状态机驱动，机器协议隔离在 `MachineAdapter`，开发环境使用确定性的 `MockMachineAdapter`。本交付包同时包含本地视觉识别、匿名跟踪、Kuku 眼神跟随和三段本地 voice，不再依赖外部测试 bundle。
 
 ## 环境与启动
 
 - Node.js `>=22.13.0`
-- 首次安装：`npm install`
-- 本地开发：`npm run dev`
-- 生产构建：`npm run build`
+- Apple Silicon macOS 14+
+- Python 3.11/3.12
+- UV Python 包与项目管理器
+- 首次安装：
 
-本地预览默认由 Vite/Vinext 启动。界面业务全部在客户端运行，不需要数据库、登录、远程字体、CDN 或在线图片。
+```bash
+npm install
+npm run local-ai:sync
+```
+
+- 一体化本地启动：
+
+```bash
+npm run dev:local
+```
+
+浏览器打开 <http://127.0.0.1:4174>。该命令同时启动主前端与 `127.0.0.1:8765` 本地算法服务；按 `Ctrl+C` 会一起停止两个子进程。
+
+- 如果 `4174` 已占用，可用 `KUKU_FRONTEND_PORT=4176 npm run dev:local` 覆盖前端端口。
+- 仅启动前端（不含视觉/voice）：`npm run dev`
+- 生产构建：`npm run build`
+- 快速验证闲置返回：打开 <http://127.0.0.1:4174/?idleTest=1>，进入第二页或点单页后停止操作；2 秒出现“即将回到首页”，再过 3 秒自动返回。此参数只在本机/私有局域网地址生效，普通地址仍严格使用 90 秒等待 + 10 秒倒计时。
+
+本地预览默认由 Vite/Vinext 启动。界面业务全部在客户端运行，不需要数据库、登录、远程字体、CDN 或在线图片。视觉模型、摄像头推理和音频只在本机运行；页面不会展示摄像头画面或人脸框，也不会持久化相关数据。
 
 ## 已实现能力
 
@@ -28,8 +47,19 @@
 - 制作阶段、单调进度、乱序事件过滤与订单 ID 校验
 - 提交未知、断线恢复、制作失败、售罄和服务不可用场景
 - 本地 RecoverySnapshot，含 schema、TTL 与存储降级
-- 统一 idle 策略：首页 impact 永不重置，welcome 30 秒，点单页 45/60 秒，制作阶段不重置，pickup 30 秒
+- 统一 idle 策略：安全页面连续 90 秒无点击后显示 10 秒返回首页倒计时；提交、制作与恢复阶段不会中断订单；自动返回首页 5 秒后 Kuku 闭眼瞌睡
 - 持续 Kuku 舞台、cue 状态、点击反馈与 Reduced Motion
+- 饮品选择、定制选择、直接点击 Kuku 与所有页面每隔随机 8–14 秒的自主互动，统一使用相同的 `tap-delight` 表情、动作时长和恢复逻辑
+- Kuku 原始外观上的分页面眼睛锚点、平滑视觉目标跟随与 settled 回执
+- 首页默认保留闭眼表情；本地接近问候语音触发后用 3 秒睁眼
+- 睁眼后显示真实 10 秒自动进入欢迎页倒计时，可取消并在 2 分钟后再次提示
+- 首页“开始点单”按钮直接进入饮品选择页，自动倒计时仍进入欢迎页
+- 清晰的“正在识别 / 已识别到访客 / 摄像头已关闭”本地视觉状态
+- MediaPipe、OpenCV、OpenVINO 本地视觉推理与匿名几何跟踪
+- 接近时播放附近问候；首页等待 10 秒并进入第二页时播放快速购买提示
+- 订单确认进入制作状态后播放购买致谢；三段语音均在本机播放
+- 前两页显示隐私说明；全程提供语音开关和临时摄像头关闭/重开按钮
+- 不展示人脸、摄像头画面或人脸框
 - safe-area、100dvh、390×693 / 540×960 / 1080×1920 触控布局
 - Error Boundary、脱敏滚动日志与离线核心资源
 
@@ -70,6 +100,8 @@ Kuku 姿态、三款饮品和公益照片均直接使用用户提供的 `k1.png`
 npm run lint
 npm run typecheck
 npm test
+npm run local-ai:test
+npm run verify:local
 npm run test:e2e
 npm run test:visual
 KUKU_SOAK_CYCLES=300 npm run test:soak
@@ -77,6 +109,7 @@ npm run build
 ```
 
 - `npm test`：Vitest 组件基础检查 + Node 领域/机器/恢复/日志测试
+- `local-ai:test`：本地视觉、匿名跟踪、接近度、注意力与 voice 策略测试
 - `test:e2e`：三种触控视口的主流程、返回确认、数据一致性和溢出检查
 - `test:visual`：三种视口下的 k1–k7 截图附件
 - `test:soak`：完整 session 循环，可用 `KUKU_SOAK_CYCLES` 调整次数
@@ -92,6 +125,10 @@ src/content/                 中文文案、饮品与公益配置
 src/domain/                  状态机、订单、校验、进度、idle
 src/infrastructure/machine/  MachineAdapter 与确定性 Mock
 src/infrastructure/          恢复快照与匿名日志
+local-ai/backend/            本地视觉、匿名跟踪、决策、voice 与 API
+local-ai/models/             MediaPipe 与 OpenVINO 本地模型
+local-ai/config/             视觉、接近度与 voice 固定策略
+scripts/dev-local.mjs        一键启动/停止前端与本地算法
 tests/domain/                领域与基础设施测试
 tests/e2e/                   触控、视觉与长稳测试
 ```

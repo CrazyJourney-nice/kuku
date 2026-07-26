@@ -46,7 +46,11 @@ export const copy = {
     finish: "完成",
   },
   idle: {
-    warning: "还在选择吗？若没有操作，本次内容将在 15 秒后清空。",
+    eyebrow: "长时间未操作",
+    title: "即将回到首页",
+    message: "当前页面将在倒计时结束后返回首页，未提交的选择不会保留。",
+    continue: "继续使用",
+    returnNow: "立即回到首页",
   },
   service: {
     unavailable: "暂时无法提供服务",

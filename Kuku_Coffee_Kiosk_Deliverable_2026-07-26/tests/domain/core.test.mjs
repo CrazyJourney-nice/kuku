@@ -133,6 +133,28 @@ test("machine readiness and live inventory guard entry and submission", () => {
   assert.equal(state.clientOrderId, null);
 });
 
+test("impact start button can skip welcome and enter drink selection", () => {
+  const deps = {
+    now: () => Date.parse("2026-07-26T00:00:00.000Z"),
+    createId: () => "direct-entry",
+    catalog: drinksModule.drinksById,
+    isMachineReady: () => true,
+  };
+  let state = stateModule.createInitialContext(deps);
+  state = stateModule.transitionKiosk(
+    state,
+    { type: "MACHINE_READY_CHANGED", ready: true },
+    deps,
+  );
+  state = stateModule.transitionKiosk(
+    state,
+    { type: "START_ORDER_DIRECT" },
+    deps,
+  );
+
+  assert.equal(state.screen, "drink");
+});
+
 test("pickup completion can preempt the entrance transition lock", () => {
   const deps = {
     now: () => Date.parse("2026-07-26T00:00:00.000Z"),
@@ -153,6 +175,41 @@ test("pickup completion can preempt the entrance transition lock", () => {
   );
   assert.equal(next.screen, "impact");
   assert.equal(next.transitionLocked, false);
+});
+
+test("local idle test policy exposes a short warning and return cycle", () => {
+  const startedAt = 10_000;
+  const beforeWarning = idleModule.getIdleDecision(
+    "welcome",
+    startedAt,
+    startedAt + 1_999,
+    idleModule.localIdleTestPolicies,
+  );
+  const warning = idleModule.getIdleDecision(
+    "welcome",
+    startedAt,
+    startedAt + 2_000,
+    idleModule.localIdleTestPolicies,
+  );
+  const timeout = idleModule.getIdleDecision(
+    "welcome",
+    startedAt,
+    startedAt + 5_000,
+    idleModule.localIdleTestPolicies,
+  );
+
+  assert.equal(beforeWarning.state, "active");
+  assert.deepEqual(warning, { state: "warning", remainingMs: 3_000 });
+  assert.deepEqual(timeout, { state: "timeout", remainingMs: 0 });
+  assert.equal(
+    idleModule.getIdleDecision(
+      "impact",
+      startedAt,
+      startedAt + 60_000,
+      idleModule.localIdleTestPolicies,
+    ).state,
+    "inactive",
+  );
 });
 
 test("frontend failures recover in-flight orders and reset safe drafts", () => {
@@ -433,20 +490,20 @@ test("rolling logger redacts sensitive fields and truncates order ids", () => {
   assert.deepEqual(entries[0].details, { safe: "ok" });
 });
 
-test("idle decisions use absolute time and never reset brewing", () => {
-  assert.deepEqual(idleModule.getIdleDecision("impact", 0, 999_999), {
-    state: "inactive",
-    remainingMs: null,
-  });
+test("idle decisions wait ninety seconds, count down, and protect brewing", () => {
   assert.deepEqual(idleModule.getIdleDecision("welcome", 0, 30_000), {
-    state: "timeout",
-    remainingMs: 0,
+    state: "active",
+    remainingMs: 70_000,
   });
-  assert.deepEqual(idleModule.getIdleDecision("drink", 0, 45_000), {
+  assert.deepEqual(idleModule.getIdleDecision("impact", 0, 90_000), {
     state: "warning",
-    remainingMs: 15_000,
+    remainingMs: 10_000,
   });
-  assert.deepEqual(idleModule.getIdleDecision("drink", 0, 60_000), {
+  assert.deepEqual(idleModule.getIdleDecision("drink", 0, 90_000), {
+    state: "warning",
+    remainingMs: 10_000,
+  });
+  assert.deepEqual(idleModule.getIdleDecision("drink", 0, 100_000), {
     state: "timeout",
     remainingMs: 0,
   });
@@ -454,4 +511,5 @@ test("idle decisions use absolute time and never reset brewing", () => {
     state: "inactive",
     remainingMs: null,
   });
+  assert.equal(idleModule.MASCOT_SLEEP_AFTER_RETURN_MS, 5_000);
 });

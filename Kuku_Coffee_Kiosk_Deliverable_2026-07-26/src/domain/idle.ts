@@ -7,17 +7,49 @@ export type IdlePolicy = {
 
 export type IdlePolicies = Readonly<Record<KioskScreen, IdlePolicy>>;
 
-export const defaultIdlePolicies: IdlePolicies = Object.freeze({
-  welcome: { warningAfterMs: null, timeoutAfterMs: 30_000 },
-  impact: { warningAfterMs: null, timeoutAfterMs: null },
-  drink: { warningAfterMs: 45_000, timeoutAfterMs: 60_000 },
-  customize: { warningAfterMs: 45_000, timeoutAfterMs: 60_000 },
-  confirm: { warningAfterMs: 45_000, timeoutAfterMs: 60_000 },
-  submitting: { warningAfterMs: null, timeoutAfterMs: null },
-  brewing: { warningAfterMs: null, timeoutAfterMs: null },
-  pickup: { warningAfterMs: 25_000, timeoutAfterMs: 30_000 },
-  recovering: { warningAfterMs: null, timeoutAfterMs: null },
-  out_of_service: { warningAfterMs: null, timeoutAfterMs: null },
+export const IDLE_PROMPT_AFTER_MS = 90_000;
+export const IDLE_RETURN_COUNTDOWN_SECONDS = 10;
+export const IDLE_RETURN_AFTER_MS =
+  IDLE_PROMPT_AFTER_MS + IDLE_RETURN_COUNTDOWN_SECONDS * 1_000;
+export const MASCOT_SLEEP_AFTER_RETURN_MS = 5_000;
+export const LOCAL_IDLE_TEST_PROMPT_AFTER_MS = 2_000;
+export const LOCAL_IDLE_TEST_RETURN_AFTER_MS = 5_000;
+
+const returnHomePolicy: IdlePolicy = Object.freeze({
+  warningAfterMs: IDLE_PROMPT_AFTER_MS,
+  timeoutAfterMs: IDLE_RETURN_AFTER_MS,
+});
+
+function createPolicies(returnPolicy: IdlePolicy): IdlePolicies {
+  return Object.freeze({
+    welcome: returnPolicy,
+    impact: returnPolicy,
+    drink: returnPolicy,
+    customize: returnPolicy,
+    confirm: returnPolicy,
+    submitting: { warningAfterMs: null, timeoutAfterMs: null },
+    brewing: { warningAfterMs: null, timeoutAfterMs: null },
+    pickup: returnPolicy,
+    recovering: { warningAfterMs: null, timeoutAfterMs: null },
+    out_of_service: { warningAfterMs: null, timeoutAfterMs: null },
+  });
+}
+
+export const defaultIdlePolicies: IdlePolicies = createPolicies(returnHomePolicy);
+
+export const localIdleTestPolicies: IdlePolicies = Object.freeze({
+  ...createPolicies(
+    Object.freeze({
+      warningAfterMs: LOCAL_IDLE_TEST_PROMPT_AFTER_MS,
+      timeoutAfterMs: LOCAL_IDLE_TEST_RETURN_AFTER_MS,
+    }),
+  ),
+  // Keep the returned home screen stable long enough to verify the real
+  // five-second sleep transition during accelerated local QA.
+  impact: {
+    warningAfterMs: null,
+    timeoutAfterMs: null,
+  },
 });
 
 export type IdleDecision =

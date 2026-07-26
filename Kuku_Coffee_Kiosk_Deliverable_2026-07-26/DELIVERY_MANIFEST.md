@@ -1,11 +1,10 @@
-# Kuku Coffee 售货机前端交付包
+# Kuku Coffee 售货机一体化交付包
 
 - 交付目录：`Kuku_Coffee_Kiosk_Deliverable_2026-07-26`
 - 最近更新：2026-07-27
-- 来源提交：`7ae64b1fd7b13d5954fd381190d48adcd798d203`
-- 原始任务文件：87 个
-- 页面转场、首页交换与进度条回归新增文件：4 个
-- 本说明文件：1 个
+- 前端：七屏 Kuku 触控售货机
+- 本地算法：视觉、匿名跟踪、注意力、接近度与 voice
+- 运行边界：Apple Silicon macOS、本机回环地址、默认静音
 
 ## 内容范围
 
@@ -19,6 +18,9 @@
 - 单元测试、领域测试、端到端测试与视觉基准图
 - GPU 合成的左右方向转场、参考图片预加载与方向回归测试
 - 五步进度条的节点对齐、跨页面全宽约束与自动化回归测试
+- 主 Kuku 原始外观上的视觉目标眼神跟随
+- 本地视觉/voice Python 源码、UV 锁文件、模型、三段音频与测试
+- 一键启动前端与本地算法的 `npm run dev:local`
 
 原项目目录中的文件保持不动。本交付包未收录与该任务无关的 `.DS_Store`、其他测试包、`.git`、`node_modules` 和运行缓存。
 
@@ -26,8 +28,12 @@
 
 ```bash
 npm install
-npm run dev
+npm run local-ai:sync
+npm run dev:local
 ```
+
+主界面：<http://127.0.0.1:4174>
+本地算法：<http://127.0.0.1:8765>
 
 ## 验证
 
@@ -35,6 +41,7 @@ npm run dev
 npm run lint
 npm run typecheck
 npm test
+npm run local-ai:test
 npm run test:e2e
 npm run build
 ```
@@ -54,6 +61,6 @@ npm run build
 - 首次进入及替换状态使用短淡入
 - 转场期间只挂载当前页面，避免旧页与新页重复渲染
 
-## 已部署版本
+## 发布说明
 
-生产地址：<https://kuku-coffee-kiosk.hc2237899.chatgpt.site>
+本次只形成完整本地交付目录，不发布到需要登录的私有站点。

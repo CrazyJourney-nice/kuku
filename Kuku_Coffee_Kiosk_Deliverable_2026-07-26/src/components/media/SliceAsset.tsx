@@ -18,12 +18,14 @@ export function SliceAsset({
   alt = "",
   fallback,
   fallbackKind = "generic",
+  decoding = "async",
 }: {
   crop: SliceCrop;
   className?: string;
   alt?: string;
   fallback?: ReactNode;
   fallbackKind?: "generic" | "mascot" | "drink" | "impact";
+  decoding?: "async" | "sync" | "auto";
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const failed = failedSrc === crop.src;
@@ -71,9 +73,10 @@ export function SliceAsset({
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- exact slice pixels are required */}
           <img
+            key={`${crop.src}:${crop.x}:${crop.y}:${crop.width}:${crop.height}`}
             src={crop.src}
             alt={alt}
-            decoding="async"
+            decoding={decoding}
             loading="eager"
             draggable={false}
             width={crop.sourceWidth}

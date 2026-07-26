@@ -26,11 +26,27 @@
       "required": true
     },
     {
-      "id": "voice_welcome",
-      "path": "demo_assets/audio/welcome.wav",
+      "id": "voice_proximity_greeting",
+      "path": "demo_assets/audio/proximity_greeting.wav",
       "source_url": "locally-generated",
-      "license": "Project-local demo asset",
-      "sha256": "36353f615faa8c7f3499f2bac0801593e546a4f52bf4d0eaeca73c80b19162d4",
+      "license": "Project-provided local asset",
+      "sha256": "9eddfdceb5128cc28f5c338b3087901d1d310238d8bc263a830a5660c2dc3169",
+      "required": true
+    },
+    {
+      "id": "voice_quick_buy_prompt",
+      "path": "demo_assets/audio/quick_buy_prompt.wav",
+      "source_url": "locally-generated",
+      "license": "Project-provided local asset",
+      "sha256": "5defea071a9f4df0c248ff88712f2fb881a83aef7a8bf15b90fdc7aaf821be11",
+      "required": true
+    },
+    {
+      "id": "voice_order_thanks",
+      "path": "demo_assets/audio/order_thanks.wav",
+      "source_url": "locally-generated",
+      "license": "Project-provided local asset",
+      "sha256": "fc0973091f47d5545037b3c7633663654544773e4ed097e9591e3284a66a89b6",
       "required": true
     }
   ]

@@ -31,11 +31,13 @@ def main()->int:
             checks.append(result("face_model_load",True,"MediaPipe local task"))
         except Exception as exc: checks.append(result("face_model_load",False,str(exc)))
     else: checks.append(result("face_model_load",False,str(face)))
-    audio=ROOT/"demo_assets"/"audio"/"welcome.wav"
-    try:
-        with wave.open(str(audio),"rb") as f: ok=f.getnframes()>0; detail=f"{f.getframerate()} Hz"
-    except Exception as exc: ok=False; detail=str(exc)
-    checks += [result("local_audio_asset",ok,detail),result("local_audio_player",shutil.which("afplay") is not None,"afplay")]
+    for clip in ("proximity_greeting", "quick_buy_prompt", "order_thanks"):
+        audio=ROOT/"demo_assets"/"audio"/f"{clip}.wav"
+        try:
+            with wave.open(str(audio),"rb") as f: ok=f.getnframes()>0; detail=f"{f.getframerate()} Hz"
+        except Exception as exc: ok=False; detail=str(exc)
+        checks.append(result(f"local_audio_{clip}",ok,detail))
+    checks.append(result("local_audio_player",shutil.which("afplay") is not None,"afplay"))
     if not skip_camera and "cv2" in modules:
         cv2=modules["cv2"]; camera=cv2.VideoCapture(0,getattr(cv2,"CAP_AVFOUNDATION",0))
         ok,frame=camera.read() if camera.isOpened() else (False,None); camera.release()

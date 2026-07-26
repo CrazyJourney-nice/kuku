@@ -1,10 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function advanceToDrink(page: Page) {
-  await page.getByTestId("start-intro").click();
-  await expect(page.getByTestId("screen-welcome")).toBeVisible();
-  await expect(page.getByTestId("start-order")).toBeEnabled();
-  await page.getByTestId("start-order").click();
+  await page.getByTestId("start-order-direct").click();
   await expect(page.getByTestId("screen-drink")).toBeVisible();
 }
 

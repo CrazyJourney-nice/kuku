@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useReducer,
@@ -18,7 +19,10 @@ import {
 } from "@/src/components/media/SliceAsset";
 import { useKioskAssetPreload } from "@/src/components/media/useKioskAssetPreload";
 import {
+  DRINK_SCREEN_MASCOT_CUE,
   PersistentKukuStage,
+  type MascotInteractionCommand,
+  type MascotInteractionKind,
   type MascotCue,
 } from "@/src/components/mascot/KukuStage";
 import { copy } from "@/src/content/copy.zh-CN";
@@ -31,6 +35,11 @@ import {
   type KioskContext,
   type KioskEvent,
 } from "@/src/domain/kioskState";
+import {
+  getIdleDecision,
+  localIdleTestPolicies,
+  MASCOT_SLEEP_AFTER_RETURN_MS,
+} from "@/src/domain/idle";
 import type {
   Customization,
   DrinkId,
@@ -50,6 +59,15 @@ import {
   type RecoverySnapshot,
 } from "@/src/infrastructure/persistence/SessionSnapshotStore";
 import { KioskLogger } from "@/src/infrastructure/telemetry/kioskLogger";
+import {
+  LocalVisionPrivacyBar,
+  shouldShowLocalVisionPrivacyNotice,
+} from "@/src/features/localVision/LocalVisionPrivacyBar";
+import { useImpactVoiceEntry } from "@/src/features/localVision/useImpactVoiceEntry";
+import {
+  hostVoiceClipForScreen,
+  useLocalVisionVoice,
+} from "@/src/features/localVision/useLocalVisionVoice";
 
 type RestoreEvent = {
   type: "RESTORE_SNAPSHOT";
@@ -103,6 +121,23 @@ const configuredScenario = getConfiguredScenario();
 const visualTestMode =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("visual") === "1";
+
+function isLocalNetworkHostname(hostname: string): boolean {
+  return (
+    ["localhost", "127.0.0.1", "::1"].includes(hostname) ||
+    /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+  );
+}
+
+function isLocalIdleTestRequest(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    isLocalNetworkHostname(window.location.hostname) &&
+    new URLSearchParams(window.location.search).get("idleTest") === "1"
+  );
+}
 
 const impactPhotoCrop: SliceCrop = {
   // Lossless crop generated from the exact pixels of the user-provided k2.
@@ -237,10 +272,16 @@ function WelcomeScreen({
 
 function ImpactScreen({
   context,
+  entryCountdown,
+  onCancelEntry,
   send,
+  showEntryCountdown,
 }: {
   context: KioskContext;
+  entryCountdown: number;
+  onCancelEntry: () => void;
   send: (event: AppEvent) => void;
+  showEntryCountdown: boolean;
 }) {
   return (
     <Screen context={context} className="impact-screen" testId="screen-impact">
@@ -259,14 +300,41 @@ function ImpactScreen({
           <div className="impact-stat"><span aria-hidden="true">♡</span><span>公益投入</span><strong>{impactContent.investmentCents / 1_000_000}万元</strong></div>
         </div>
       </div>
-      <div id="kuku-slot-impact" className="kuku-stage-slot kuku-stage-slot--fill" />
+      <div className="impact-mascot-zone">
+        <div className="impact-entry-message-slot">
+          {showEntryCountdown ? (
+            <aside
+              className="impact-entry-message"
+              role="status"
+              aria-live="polite"
+              data-testid="impact-entry-countdown"
+            >
+              <p>
+                <strong>{entryCountdown}s</strong>后进入点单界面
+              </p>
+              <button
+                type="button"
+                aria-label="取消自动进入点单界面"
+                onClick={onCancelEntry}
+              >
+                ❌
+              </button>
+            </aside>
+          ) : null}
+        </div>
+        <div id="kuku-slot-impact" className="kuku-stage-slot kuku-stage-slot--fill" />
+      </div>
       <div className="action-bar action-bar--single">
         <button
           className="button button--primary"
           type="button"
-          data-testid="start-intro"
+          data-testid="start-order-direct"
           disabled={!context.machineReady || context.transitionLocked}
-          onClick={() => send({ type: "START_INTRO" })}
+          onClick={() =>
+            send({
+              type: visualTestMode ? "START_INTRO" : "START_ORDER_DIRECT",
+            })
+          }
         >
           {copy.impact.cta}
         </button>
@@ -294,10 +362,12 @@ function GuideStrip({
 
 function DrinkScreen({
   context,
+  onMascotInteract,
   send,
   requestReset,
 }: {
   context: KioskContext;
+  onMascotInteract: (kind: MascotInteractionKind) => void;
   send: (event: AppEvent) => void;
   requestReset: () => void;
 }) {
@@ -333,7 +403,10 @@ function DrinkScreen({
                   value={drink.id}
                   checked={selected}
                   disabled={!available}
-                  onChange={() => send({ type: "SELECT_DRINK", drinkId: drink.id })}
+                  onClick={() => onMascotInteract("selection")}
+                  onChange={() =>
+                    send({ type: "SELECT_DRINK", drinkId: drink.id })
+                  }
                 />
                 <SliceAsset
                   className="drink-cup-image"
@@ -400,6 +473,7 @@ function OptionGroup<T extends string | number>({
   choices,
   columns,
   onChange,
+  onInteract,
 }: {
   name: string;
   legend: string;
@@ -407,6 +481,7 @@ function OptionGroup<T extends string | number>({
   choices: readonly Choice<T>[];
   columns: number;
   onChange: (value: T) => void;
+  onInteract: () => void;
 }) {
   return (
     <fieldset className="option-group">
@@ -426,6 +501,7 @@ function OptionGroup<T extends string | number>({
                 value={String(choice.value)}
                 checked={value === choice.value}
                 disabled={choice.disabled}
+                onClick={onInteract}
                 onChange={() => onChange(choice.value)}
               />
               <label htmlFor={id}>
@@ -442,9 +518,11 @@ function OptionGroup<T extends string | number>({
 
 function CustomizeScreen({
   context,
+  onMascotInteract,
   send,
 }: {
   context: KioskContext;
+  onMascotInteract: (kind: MascotInteractionKind) => void;
   send: (event: AppEvent) => void;
 }) {
   if (!context.selectedDrinkId || !context.customization) return null;
@@ -485,6 +563,7 @@ function CustomizeScreen({
               label: `${value}%`,
               disabled: !drink.capabilities.sweetness.includes(value),
             }))}
+            onInteract={() => onMascotInteract("approval")}
             onChange={(sweetness) => patch({ sweetness })}
           />
           <OptionGroup<Temperature>
@@ -499,6 +578,7 @@ function CustomizeScreen({
               ...choice,
               disabled: !drink.capabilities.temperature.includes(choice.value),
             }))}
+            onInteract={() => onMascotInteract("approval")}
             onChange={(temperature) => patch({ temperature })}
           />
           <OptionGroup<MilkBase>
@@ -507,6 +587,7 @@ function CustomizeScreen({
             value={customization.milkBase}
             columns={3}
             choices={milkChoices}
+            onInteract={() => onMascotInteract("approval")}
             onChange={(milkBase) => patch({ milkBase })}
           />
           <OptionGroup<LatteArt>
@@ -515,6 +596,7 @@ function CustomizeScreen({
             value={customization.latteArt}
             columns={4}
             choices={artChoices}
+            onInteract={() => onMascotInteract("approval")}
             onChange={(latteArt) => patch({ latteArt })}
           />
         </div>
@@ -684,10 +766,7 @@ function mascotPresentation(context: KioskContext): {
     case "impact":
       return { cue: "grateful", size: "medium", speech: copy.impact.title };
     case "drink":
-      return {
-        cue: context.selectedDrinkId ? "approve" : "point-options",
-        size: "compact",
-      };
+      return { cue: DRINK_SCREEN_MASCOT_CUE, size: "compact" };
     case "customize":
       return { cue: "approve", size: "compact" };
     case "confirm":
@@ -840,9 +919,27 @@ function OutOfServiceScreen({
 export function KioskApp() {
   useKioskAssetPreload();
   const [context, send] = useReducer(appReducer, undefined, createInitialContext);
+  const [localIdleTestMode, setLocalIdleTestMode] = useState(false);
+  const localVision = useLocalVisionVoice();
+  const {
+    cancelVoiceFollowup,
+    playVoiceClip,
+    status: localVisionStatus,
+  } = localVision;
+  const impactEntry = useImpactVoiceEntry({
+    active: context.screen === "impact" && context.machineReady,
+    greetingEventId: visualTestMode
+      ? null
+      : localVision.proximityGreetingEventId,
+    onComplete: () => send({ type: "START_INTRO" }),
+  });
   const [resetPrompt, setResetPrompt] = useState(false);
-  const [idleWarning, setIdleWarning] = useState(false);
-  const [pickupRemaining, setPickupRemaining] = useState<number | null>(null);
+  const [idleReturnRemaining, setIdleReturnRemaining] = useState<number | null>(
+    null,
+  );
+  const [mascotSleeping, setMascotSleeping] = useState(false);
+  const [mascotInteraction, setMascotInteraction] =
+    useState<MascotInteractionCommand | null>(null);
   const scenario = configuredScenario;
   const machine = useMemo(
     () =>
@@ -861,16 +958,70 @@ export function KioskApp() {
     [],
   );
   const submittedIds = useRef(new Set<string>());
+  const quickBuyPromptSessions = useRef(new Set<string>());
+  const thankedOrderIds = useRef(new Set<string>());
   const cupRemovedTimers = useRef(new Set<number>());
   const machineDisposeTimer = useRef<number | null>(null);
   const activityAt = useRef(0);
+  const idleReturnTriggered = useRef(false);
+  const mascotSleepTimer = useRef<number | null>(null);
+  const mascotInteractionSequence = useRef(0);
   const startupRecoveryPending = useRef(false);
 
   useEffect(() => {
+    setLocalIdleTestMode(isLocalIdleTestRequest());
+  }, []);
+
+  const interactMascot = useCallback((kind: MascotInteractionKind) => {
+    mascotInteractionSequence.current += 1;
+    setMascotInteraction({
+      id: mascotInteractionSequence.current,
+      kind,
+    });
+  }, []);
+
+  const continueIdleSession = useCallback(() => {
     activityAt.current = Date.now();
-    const recordActivity = () => {
-      activityAt.current = Date.now();
-      setIdleWarning(false);
+    idleReturnTriggered.current = false;
+    setIdleReturnRemaining(null);
+    setMascotSleeping(false);
+    if (mascotSleepTimer.current !== null) {
+      window.clearTimeout(mascotSleepTimer.current);
+      mascotSleepTimer.current = null;
+    }
+  }, []);
+
+  const completeIdleReturn = useCallback(() => {
+    if (idleReturnTriggered.current) return;
+    idleReturnTriggered.current = true;
+    setIdleReturnRemaining(null);
+    setResetPrompt(false);
+    setMascotSleeping(false);
+    if (mascotSleepTimer.current !== null) {
+      window.clearTimeout(mascotSleepTimer.current);
+    }
+    mascotSleepTimer.current = window.setTimeout(() => {
+      mascotSleepTimer.current = null;
+      setMascotSleeping(true);
+    }, MASCOT_SLEEP_AFTER_RETURN_MS);
+    send(
+      context.screen === "pickup"
+        ? { type: "FINISH_SESSION" }
+        : { type: "IDLE_TIMEOUT" },
+    );
+  }, [context.screen]);
+
+  useEffect(() => {
+    activityAt.current = Date.now();
+    const recordActivity = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('[data-idle-action="true"]')
+      ) {
+        return;
+      }
+      continueIdleSession();
     };
     const preventContextMenu = (event: MouseEvent) => event.preventDefault();
     window.addEventListener("pointerdown", recordActivity, { passive: true });
@@ -880,8 +1031,12 @@ export function KioskApp() {
       window.removeEventListener("pointerdown", recordActivity);
       window.removeEventListener("keydown", recordActivity);
       window.removeEventListener("contextmenu", preventContextMenu);
+      if (mascotSleepTimer.current !== null) {
+        window.clearTimeout(mascotSleepTimer.current);
+        mascotSleepTimer.current = null;
+      }
     };
-  }, []);
+  }, [continueIdleSession]);
 
   useEffect(() => {
     const recordFrontendError = (
@@ -1144,27 +1299,90 @@ export function KioskApp() {
   }, [context.clientOrderId, context.screen, machine]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      const inactiveMs = Date.now() - activityAt.current;
-      if (context.screen === "welcome" && inactiveMs >= 30_000) {
-        send({ type: "IDLE_TIMEOUT" });
-      } else if (["drink", "customize", "confirm"].includes(context.screen)) {
-        if (inactiveMs >= 60_000) {
-          send({ type: "IDLE_TIMEOUT" });
-        } else {
-          setIdleWarning(inactiveMs >= 45_000);
-        }
-      } else if (context.screen === "pickup") {
-        const remaining = Math.max(0, Math.ceil((30_000 - inactiveMs) / 1000));
-        setPickupRemaining(remaining);
-        if (remaining === 0) send({ type: "FINISH_SESSION" });
-      } else {
-        setIdleWarning(false);
-        setPickupRemaining(null);
+    const evaluateIdleState = () => {
+      const decision = getIdleDecision(
+        context.screen,
+        activityAt.current,
+        Date.now(),
+        localIdleTestMode ? localIdleTestPolicies : undefined,
+      );
+      if (decision.state === "warning") {
+        setIdleReturnRemaining(
+          Math.max(1, Math.ceil(decision.remainingMs / 1_000)),
+        );
+        return;
       }
-    }, 1000);
+      if (decision.state === "timeout") {
+        completeIdleReturn();
+        return;
+      }
+      setIdleReturnRemaining(null);
+      if (decision.state === "active") {
+        idleReturnTriggered.current = false;
+      }
+    };
+
+    evaluateIdleState();
+    const timer = window.setInterval(evaluateIdleState, 250);
     return () => window.clearInterval(timer);
-  }, [context.screen]);
+  }, [completeIdleReturn, context.screen, localIdleTestMode]);
+
+  useEffect(() => {
+    if (!localVision.proximityGreetingEventId) return;
+    setMascotSleeping(false);
+    if (mascotSleepTimer.current !== null) {
+      window.clearTimeout(mascotSleepTimer.current);
+      mascotSleepTimer.current = null;
+    }
+    void cancelVoiceFollowup();
+  }, [
+    cancelVoiceFollowup,
+    localVision.proximityGreetingEventId,
+  ]);
+
+  useEffect(() => {
+    if (
+      hostVoiceClipForScreen(context.screen, context.clientOrderId) !==
+        "quick_buy_prompt" ||
+      localVisionStatus !== "live" ||
+      quickBuyPromptSessions.current.has(context.sessionId)
+    ) {
+      return;
+    }
+    void playVoiceClip("quick_buy_prompt").then((handled) => {
+      if (handled) {
+        quickBuyPromptSessions.current.add(context.sessionId);
+      }
+    });
+  }, [
+    context.clientOrderId,
+    context.screen,
+    context.sessionId,
+    localVisionStatus,
+    playVoiceClip,
+  ]);
+
+  useEffect(() => {
+    const orderId = context.clientOrderId;
+    if (
+      hostVoiceClipForScreen(context.screen, orderId) !== "order_thanks" ||
+      !orderId ||
+      localVisionStatus !== "live" ||
+      thankedOrderIds.current.has(orderId)
+    ) {
+      return;
+    }
+    void playVoiceClip("order_thanks").then((handled) => {
+      if (handled) {
+        thankedOrderIds.current.add(orderId);
+      }
+    });
+  }, [
+    context.clientOrderId,
+    context.screen,
+    localVisionStatus,
+    playVoiceClip,
+  ]);
 
   useEffect(() => {
     logger.log("screen_entered", {
@@ -1186,6 +1404,8 @@ export function KioskApp() {
       cupRemovedTimers.current.clear();
       snapshotStore.clear();
       submittedIds.current.clear();
+      quickBuyPromptSessions.current.clear();
+      thankedOrderIds.current.clear();
       activityAt.current = Date.now();
     }
   }, [context.screen, context.sessionId, logger, snapshotStore]);
@@ -1207,13 +1427,34 @@ export function KioskApp() {
       screen = <WelcomeScreen context={context} send={send} />;
       break;
     case "impact":
-      screen = <ImpactScreen context={context} send={send} />;
+      screen = (
+        <ImpactScreen
+          context={context}
+          entryCountdown={impactEntry.remainingSeconds}
+          onCancelEntry={impactEntry.cancel}
+          send={send}
+          showEntryCountdown={impactEntry.showCountdown}
+        />
+      );
       break;
     case "drink":
-      screen = <DrinkScreen context={context} send={send} requestReset={requestReset} />;
+      screen = (
+        <DrinkScreen
+          context={context}
+          onMascotInteract={interactMascot}
+          send={send}
+          requestReset={requestReset}
+        />
+      );
       break;
     case "customize":
-      screen = <CustomizeScreen context={context} send={send} />;
+      screen = (
+        <CustomizeScreen
+          context={context}
+          onMascotInteract={interactMascot}
+          send={send}
+        />
+      );
       break;
     case "confirm":
       screen = <ConfirmScreen context={context} send={send} />;
@@ -1228,19 +1469,33 @@ export function KioskApp() {
       screen = <RecoveringScreen context={context} />;
       break;
     case "pickup":
-      screen = <PickupScreen context={context} send={send} remaining={pickupRemaining} />;
+      screen = (
+        <PickupScreen
+          context={context}
+          send={send}
+          remaining={idleReturnRemaining}
+        />
+      );
       break;
     case "out_of_service":
       screen = <OutOfServiceScreen context={context} onReset={forceReset} />;
       break;
   }
   const mascot = mascotPresentation(context);
+  const isImpactScreen = context.screen === "impact";
+  const mascotIsSleeping = isImpactScreen && mascotSleeping;
+  const mascotEyesCanFollow =
+    (!isImpactScreen || (impactEntry.hasOpened && !impactEntry.eyesOpening)) &&
+    !mascotIsSleeping;
 
   return (
     <ErrorBoundary>
       <main
         className="kiosk-app"
         data-screen={context.screen}
+        data-idle-test={localIdleTestMode ? "true" : "false"}
+        data-idle-return-remaining={idleReturnRemaining ?? ""}
+        data-mascot-sleeping={mascotIsSleeping ? "true" : "false"}
         data-machine-ready={context.machineReady ? "true" : "false"}
         data-machine-message={context.userMessage ?? ""}
       >
@@ -1248,8 +1503,23 @@ export function KioskApp() {
           cue={mascot.cue}
           direction={context.navigationDirection}
           size={mascot.size}
+          sleeping={mascotIsSleeping}
+          interaction={mascotInteraction}
           speech={mascot.speech}
           targetId={`kuku-slot-${context.screen}`}
+          lookTarget={mascotEyesCanFollow ? localVision.lookTarget : null}
+          lookCommandId={mascotEyesCanFollow ? localVision.commandId : null}
+          onEyesSettled={
+            mascotEyesCanFollow ? localVision.reportEyesSettled : undefined
+          }
+          trackedEyesEnabled={
+            !isImpactScreen || (impactEntry.eyesVisible && !mascotIsSleeping)
+          }
+          trackedEyesArtworkCover={!isImpactScreen}
+          trackedEyesFollowEnabled={mascotEyesCanFollow}
+          trackedEyesOpening={
+            isImpactScreen && impactEntry.eyesOpening
+          }
         />
         <ScreenTransitionDeck
           screenKey={context.screen}
@@ -1257,7 +1527,57 @@ export function KioskApp() {
         >
           {screen}
         </ScreenTransitionDeck>
-        {idleWarning ? <div className="idle-toast" role="status">{copy.idle.warning}</div> : null}
+        <LocalVisionPrivacyBar
+          cameraBusy={localVision.cameraBusy}
+          cameraEnabled={localVision.cameraEnabled}
+          personDetected={localVision.personDetected}
+          showPrivacyNotice={shouldShowLocalVisionPrivacyNotice(context.screen)}
+          status={localVision.status}
+          voiceBusy={localVision.voiceBusy}
+          voiceMuted={localVision.voiceMuted}
+          onToggleCamera={() => void localVision.toggleCamera()}
+          onToggleVoice={() => void localVision.toggleVoice()}
+        />
+        {idleReturnRemaining !== null ? (
+          <div
+            className="idle-return-overlay"
+            data-testid="idle-return-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="idle-return-title"
+          >
+            <div className="idle-return-card">
+              <div className="idle-return-card__mark" aria-hidden="true">
+                ⌂
+              </div>
+              <p className="eyebrow">{copy.idle.eyebrow}</p>
+              <h1 id="idle-return-title">{copy.idle.title}</h1>
+              <p>{copy.idle.message}</p>
+              <p className="idle-return-countdown" aria-live="polite">
+                <strong>{idleReturnRemaining}</strong>
+                <span>秒后返回首页</span>
+              </p>
+              <div className="action-bar">
+                <button
+                  className="button"
+                  type="button"
+                  data-idle-action="true"
+                  onClick={continueIdleSession}
+                >
+                  {copy.idle.continue}
+                </button>
+                <button
+                  className="button button--primary"
+                  type="button"
+                  data-idle-action="true"
+                  onClick={completeIdleReturn}
+                >
+                  {copy.idle.returnNow}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {resetPrompt ? (
           <div className="fault-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-title">
             <div className="fault-overlay__mark" aria-hidden="true">?</div>

@@ -50,6 +50,7 @@ export type KioskContext = {
 export type KioskEvent =
   | { type: "USER_ACTIVITY"; at?: number }
   | { type: "START_INTRO" }
+  | { type: "START_ORDER_DIRECT" }
   | { type: "START_ORDER" }
   | { type: "SELECT_DRINK"; drinkId: DrinkId }
   | { type: "CONTINUE_TO_CUSTOMIZE" }
@@ -255,6 +256,16 @@ export function transitionKiosk(
 
   switch (context.screen) {
     case "impact":
+      if (event.type === "IDLE_TIMEOUT") {
+        return reset(context, deps);
+      }
+      if (
+        event.type === "START_ORDER_DIRECT" &&
+        context.machineReady &&
+        deps.isMachineReady()
+      ) {
+        return move(context, "drink", "forward", now);
+      }
       if (
         event.type === "START_INTRO" &&
         context.machineReady &&

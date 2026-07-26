@@ -32,7 +32,7 @@
     "face_confidence_min": 0.6
   },
   "voice_journey": {
-    "followup_dwell_ms": 15000
+    "followup_dwell_ms": 10000
   },
   "scoring": {
     "direction": 0.4,
@@ -44,8 +44,11 @@
   "voice": {
     "muted": true,
     "proximity_clip_id": "proximity_greeting",
-    "followup_clip_id": "attention_follow_up",
-    "path": "demo_assets/audio/welcome.wav"
+    "proximity_path": "demo_assets/audio/proximity_greeting.wav",
+    "followup_clip_id": "quick_buy_prompt",
+    "followup_path": "demo_assets/audio/quick_buy_prompt.wav",
+    "order_thanks_clip_id": "order_thanks",
+    "order_thanks_path": "demo_assets/audio/order_thanks.wav"
   },
   "runtime": {
     "bind_host": "127.0.0.1",

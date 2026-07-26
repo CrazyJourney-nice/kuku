@@ -58,18 +58,18 @@ def test_stage_one_starts_one_interaction(config):
     assert "purchase_started_triggered" not in snapshot
 
 
-def test_followup_fires_at_fifteen_seconds_not_before(config):
+def test_followup_fires_at_ten_seconds_not_before(config):
     journey = VoiceJourneyCoordinator(config)
     journey.on_proximity(proximity(entered=True))
 
     assert journey.on_attention(attending(), proximity(), 1_000) is None
-    assert journey.on_attention(attending(), proximity(), 15_999) is None
-    trigger = journey.on_attention(attending(), proximity(), 16_000)
+    assert journey.on_attention(attending(), proximity(), 10_999) is None
+    trigger = journey.on_attention(attending(), proximity(), 11_000)
 
     assert trigger is not None
     assert trigger.stage == VoiceStage.ATTENTION_FOLLOW_UP
     assert journey.state == VoiceJourneyState.FOLLOWED_UP
-    assert journey.snapshot(trigger).attention_dwell_ms == 15_000
+    assert journey.snapshot(trigger).attention_dwell_ms == 10_000
 
 
 def test_followup_timer_resets_on_target_or_near_break(config):
@@ -142,3 +142,18 @@ def test_voice_output_reports_missing_audio(config):
     assert not allowed
     assert reason == Reason.AUDIO_UNAVAILABLE
     assert event.status == "UNAVAILABLE"
+
+
+def test_attention_followup_uses_quick_buy_prompt(config):
+    journey = VoiceJourneyCoordinator(config)
+    output = VoiceOutputCoordinator(config)
+    journey.on_proximity(proximity(entered=True))
+    journey.on_attention(attending(), proximity(), 1_000)
+    trigger = journey.on_attention(attending(), proximity(), 11_000)
+    assert trigger is not None
+
+    allowed, reason, event = output.decide(
+        trigger, muted=False, available=True
+    )
+    assert allowed and reason is None
+    assert event.clip_id == "quick_buy_prompt"

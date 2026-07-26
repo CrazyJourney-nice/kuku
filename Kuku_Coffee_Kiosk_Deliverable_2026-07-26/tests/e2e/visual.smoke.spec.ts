@@ -22,14 +22,14 @@ test("@visual matches all seven product screens", async ({ page }) => {
 
   await page.goto("/?visual=1");
   await expect(page.getByTestId("screen-impact")).toBeVisible();
-  await expect(page.getByTestId("start-intro")).toBeEnabled();
+  await expect(page.getByTestId("start-order-direct")).toBeEnabled();
   // Install deterministic time after the real initialization handshake.
   // Installing before navigation would also freeze React's client effects.
   await page.clock.install({
     time: new Date("2026-07-26T10:00:00.000Z"),
   });
   await capture("k2-impact");
-  await page.getByTestId("start-intro").click();
+  await page.getByTestId("start-order-direct").click();
   await settleTransition();
   await expect(page.getByTestId("start-order")).toBeEnabled();
   await capture("k1-welcome");

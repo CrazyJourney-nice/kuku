@@ -4,6 +4,7 @@ import hashlib
 import json
 import threading
 import time
+import uuid
 from threading import Condition, Event, Lock, RLock, Thread
 from typing import Any
 
@@ -44,7 +45,7 @@ from .tracking import AnonymousTracker
 
 
 class DemoRuntime:
-    """Live-only local vision and two-stage voice runtime."""
+    """Live-only local vision plus configured local voice runtime."""
 
     def __init__(self, config_store: ConfigStore | None = None) -> None:
         self.config_store = config_store or ConfigStore()
@@ -72,9 +73,14 @@ class DemoRuntime:
         self.voice_journey = VoiceJourneyCoordinator(config)
         self.voice_output = VoiceOutputCoordinator(config)
         self.eyes = ScreenEyeAdapter(float(config["attention"]["eye_settle_ms"]))
-        self.voice = LocalAfplayVoiceOutput(
-            PROJECT_ROOT / str(config["voice"]["path"])
-        )
+        self.voice = LocalAfplayVoiceOutput({
+            str(config["voice"]["proximity_clip_id"]):
+                PROJECT_ROOT / str(config["voice"]["proximity_path"]),
+            str(config["voice"]["followup_clip_id"]):
+                PROJECT_ROOT / str(config["voice"]["followup_path"]),
+            str(config["voice"]["order_thanks_clip_id"]):
+                PROJECT_ROOT / str(config["voice"]["order_thanks_path"]),
+        })
         self._voice_muted = bool(config["voice"]["muted"])
         self.health = RuntimeHealth(
             audio="READY" if self.voice.health() else "UNAVAILABLE"
@@ -105,6 +111,24 @@ class DemoRuntime:
             self._voice_muted = bool(muted)
             if self._voice_muted:
                 self.voice.stop()
+
+    def play_configured_clip(self, clip_id: str) -> VoiceEvent:
+        with self._response_lock:
+            event = VoiceEvent(
+                str(uuid.uuid4()), "PENDING", clip_id, None
+            )
+            if self._voice_muted:
+                event.status = "MUTED"
+                return event
+            if not self.voice.health(clip_id):
+                event.status = "UNAVAILABLE"
+                return event
+            self.voice.stop()
+            return self.voice.play_once(event)
+
+    def cancel_voice_followup(self) -> None:
+        with self._response_lock:
+            self.voice_journey.reset()
 
     def _load_models(self) -> None:
         if self._model_loaded:
@@ -210,7 +234,7 @@ class DemoRuntime:
                 "detail": (
                     None
                     if self.voice.health()
-                    else "welcome.wav or afplay unavailable"
+                    else "a configured voice clip or afplay is unavailable"
                 ),
             },
             {

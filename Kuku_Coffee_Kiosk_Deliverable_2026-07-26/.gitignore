@@ -41,3 +41,9 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# bundled local vision/voice runtime caches
+/local-ai/backend/.venv/
+/local-ai/backend/.pytest_cache/
+**/__pycache__/
+*.pyc
