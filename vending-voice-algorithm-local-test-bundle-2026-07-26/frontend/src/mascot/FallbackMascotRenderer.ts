@@ -1,4 +1,5 @@
 import type { TrackingOutput } from "./tracking/types";
+import { amplifyBodyMotion } from "./bodyMotion";
 
 const MASCOT_MARKUP = `
   <svg class="fallback-mascot__svg" viewBox="0 0 1254 1254" role="img"
@@ -62,10 +63,12 @@ export class FallbackMascotRenderer {
   }
 
   update(output: TrackingOutput): void {
-    const yawShift = output.bodyYaw * 42;
-    const pitchShift = -output.bodyPitch * 28;
-    const scaleX = 1 - Math.abs(output.bodyYaw) * 0.12;
-    const skewY = output.bodyYaw * -2.5;
+    const visualYaw = amplifyBodyMotion(output.bodyYaw);
+    const visualPitch = amplifyBodyMotion(output.bodyPitch);
+    const yawShift = visualYaw * 150;
+    const pitchShift = -visualPitch * 90;
+    const scaleX = 1 - Math.abs(visualYaw) * 0.2;
+    const skewY = visualYaw * -6;
     this.#aim.style.transformOrigin = "588px 979px";
     this.#aim.style.transform =
       `translate(${yawShift}px, ${pitchShift}px) scaleX(${scaleX}) skewY(${skewY}deg)`;

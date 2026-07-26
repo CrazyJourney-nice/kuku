@@ -10,6 +10,7 @@ import {
   type ViewModelInstanceTrigger,
 } from "@rive-app/canvas";
 import riveWasmUrl from "@rive-app/canvas/rive.wasm?url";
+import { amplifyBodyMotion } from "./bodyMotion";
 import { FallbackMascotRenderer } from "./FallbackMascotRenderer";
 import type { TrackingOutput } from "./tracking/types";
 
@@ -158,16 +159,18 @@ export class MascotRenderer {
     this.#lastOutput = output;
     this.#fallback.update(output);
     if (!this.#bindings) return;
+    const visualYaw = amplifyBodyMotion(output.bodyYaw);
+    const visualPitch = amplifyBodyMotion(output.bodyPitch);
 
     this.#bindings.mode.value = output.mode;
     this.#bindings.bodyYaw.value = output.bodyYaw;
     this.#bindings.bodyPitch.value = output.bodyPitch;
     this.#bindings.eyeX.value = output.eyeX;
     this.#bindings.eyeY.value = output.eyeY;
-    this.#bindings.bodyScaleX.value = 1 - 0.14 * Math.abs(output.bodyYaw);
-    this.#bindings.faceOffsetX.value = 32 * output.bodyYaw;
-    this.#bindings.bodyScaleY.value = 1 + 0.04 * output.bodyPitch;
-    this.#bindings.faceOffsetY.value = -18 * output.bodyPitch;
+    this.#bindings.bodyScaleX.value = 1 - 0.2 * Math.abs(visualYaw);
+    this.#bindings.faceOffsetX.value = 64 * visualYaw;
+    this.#bindings.bodyScaleY.value = 1 + 0.08 * visualPitch;
+    this.#bindings.faceOffsetY.value = -36 * visualPitch;
     this.#bindings.pupilLX.value = 21.95 + 18 * output.eyeX;
     this.#bindings.pupilRX.value = -20.45 + 18 * output.eyeX;
     this.#bindings.pupilLY.value = 6.15 - 12 * output.eyeY;
