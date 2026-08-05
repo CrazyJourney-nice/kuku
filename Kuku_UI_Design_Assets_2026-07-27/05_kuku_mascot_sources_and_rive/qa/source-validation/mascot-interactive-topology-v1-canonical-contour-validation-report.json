@@ -1,0 +1,78 @@
+{
+  "standard": "Mascot Vector Standard v1.0 - Canonical Contour Cleanup Pass",
+  "overall_pass": true,
+  "validation_date": "2026-07-27",
+  "timezone": "Asia/Hong_Kong",
+  "files": {
+    "master_ai": {
+      "path": "/Users/harveychau/Downloads/mascot-interactive-topology-v1/mascot-interactive-topology-v1-master.ai",
+      "bytes": 464551,
+      "sha256": "184eab8ddba8029975362a2cf7e13d027d1e3fca21003a73395c9ed0d7e51372",
+      "pass": true
+    },
+    "runtime_svg": {
+      "path": "/Users/harveychau/Downloads/mascot-interactive-topology-v1/mascot-interactive-topology-v1-runtime.svg",
+      "bytes": 32776,
+      "sha256": "7530065d39d4fdba6ec6de2771185050a5b50e5806b236f193c022c965eb72df",
+      "pass": true
+    },
+    "reopen_screenshot": {
+      "path": "/Users/harveychau/Downloads/mascot-interactive-topology-v1/qa/illustrator-runtime-reopen-canonical-cleanup.png",
+      "bytes": 421194,
+      "sha256": "1c86dd2933590beee311a2a0a2ba9eb4d120d5ac8f6ee92ae92c662570bf2183",
+      "pass": true
+    }
+  },
+  "master": {
+    "saved": true,
+    "rgb": true,
+    "page_items": 98,
+    "duplicate_names": 0,
+    "fill_base_stroke_violations": 0,
+    "open_filled_paths": 0,
+    "pivot_notes": 10,
+    "neutral_transform_notes": 10,
+    "guide_paths": 18,
+    "palette_swatches": 16,
+    "foot_baseline_illustrator_y": [163, 163],
+    "old_ear_backing_present": false,
+    "raster_items": 0,
+    "placed_items": 0,
+    "text_frames": 0,
+    "mesh_items": 0,
+    "pass": true
+  },
+  "runtime": {
+    "ids": 61,
+    "unique_ids": 61,
+    "shapes": 42,
+    "anchor_endpoints": 923,
+    "expanded_path_commands": 945,
+    "open_geometry": 0,
+    "transforms": 0,
+    "style_elements": 0,
+    "class_references": 0,
+    "style_attributes": 0,
+    "unsupported_features": 0,
+    "hidden_or_reference_artwork": 0,
+    "foot_baseline_svg_y": [1091, 1091],
+    "hierarchy_pass": true,
+    "eye_pupil_driver_separation_pass": true,
+    "fill_base_fill_only_pass": true,
+    "one_outline_owner_pass": true,
+    "foot_inset_highlight_pass": true,
+    "ear_solid_inner_pass": true,
+    "cable_stroke_ownership_pass": true,
+    "structural_no_unintended_double_edges_pass": true,
+    "pass": true,
+    "independent_read_only_audit_pass": true
+  },
+  "scope_excluded": [
+    "animation",
+    "ML",
+    "3D",
+    "Polar Coordinate",
+    "Rive State Machine",
+    "Rive runtime import"
+  ]
+}
