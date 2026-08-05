@@ -1,0 +1,9 @@
+tunnel: efa49cea-5f8c-4f11-8397-ad6d08edf2b2
+credentials-file: /Users/cj/.cloudflared/efa49cea-5f8c-4f11-8397-ad6d08edf2b2.json
+
+ingress:
+  - hostname: visual.rejoices.dev
+    service: http://127.0.0.1:4173
+  - hostname: ui.rejoices.dev
+    service: http://127.0.0.1:4173
+  - service: http_status:404

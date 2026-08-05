@@ -14,9 +14,22 @@
 - Node.js `>=22.13.0`
 - 首次安装：`npm install`
 - 本地开发：`npm run dev`
+- 局域网整合运行：`npm run dev:lan`
+- Cloudflare 域名运行：`npm run dev:public`
 - 生产构建：`npm run build`
 
 本地预览默认由 Vite/Vinext 启动。界面业务全部在客户端运行，不需要数据库、登录、远程字体、CDN 或在线图片。
+
+`npm run dev:lan` 会把本目录的七屏 UI 与
+`vending-voice-algorithm-local-test-bundle-2026-07-26` 的本地视觉/语音服务一起启动。
+算法服务仍仅监听本机回环地址，局域网浏览器通过同源网关连接。启动后终端会打印
+`http://<本机局域网 IP>:4173`，同一局域网内的另一台电脑可直接打开该地址。
+
+`npm run dev:public` 会在相同本机网关上启动独立的 `kuku-mac` Cloudflare
+Tunnel，并提供两个 HTTPS 入口：
+
+- `https://visual.rejoices.dev`：本地视觉/语音算法演示
+- `https://ui.rejoices.dev`：Kuku Coffee 七屏点单 UI
 
 ## 已实现能力
 

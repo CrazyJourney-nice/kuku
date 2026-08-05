@@ -53,11 +53,16 @@ dispensing controls.
 chmod +x scripts/*.sh
 make bootstrap
 make preflight
-make start
+npm run dev
 ```
 
-Open `http://127.0.0.1:8765`, press `Open demo`, then use `Enable sound` if
-audio playback is desired.
+Open `http://127.0.0.1:5173`, press `Open demo`, then use `Enable sound` if
+audio playback is desired. `npm run dev` starts both the frontend and the
+visual/voice backend at `127.0.0.1:8765`. If another Kuku development project
+already owns that backend, startup reuses it instead of opening the camera a
+second time.
+
+The packaged production-style command remains available as `make start`.
 
 To use another port:
 

@@ -34,6 +34,9 @@
   "exclude": [
     "node_modules",
     "Kuku_Coffee_Kiosk_Deliverable_*",
+    "Kuku_UI_Design_Assets_*",
+    "Kuku_Visual_System_Frontend_*",
+    "Mascot-Rive-Tracking-Pilot-*",
     "vending-voice-algorithm-local-test-bundle-*"
   ]
 }

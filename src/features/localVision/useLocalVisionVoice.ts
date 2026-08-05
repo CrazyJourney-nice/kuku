@@ -4,9 +4,6 @@ import { decode } from "@msgpack/msgpack";
 import { useCallback, useEffect, useState } from "react";
 import type { MascotLookTarget } from "@/src/components/mascot/MascotRenderer";
 
-const LOCAL_RUNTIME_ORIGIN = "http://127.0.0.1:8765";
-const LOCAL_TELEMETRY_URL = "ws://127.0.0.1:8765/ws/telemetry";
-
 type RuntimeStatus = "connecting" | "live" | "unavailable";
 
 type LocalFrame = {
@@ -47,7 +44,7 @@ function readLocalFrame(value: unknown): LocalFrame | null {
 }
 
 async function localRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${LOCAL_RUNTIME_ORIGIN}${path}`, {
+  const response = await fetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -82,7 +79,10 @@ export function useLocalVisionVoice() {
 
     const connectTelemetry = () => {
       if (disposed) return;
-      socket = new WebSocket(LOCAL_TELEMETRY_URL);
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(
+        `${protocol}//${window.location.host}/ws/telemetry`,
+      );
       socket.binaryType = "arraybuffer";
       socket.onopen = () => {
         if (!disposed) setStatus("live");

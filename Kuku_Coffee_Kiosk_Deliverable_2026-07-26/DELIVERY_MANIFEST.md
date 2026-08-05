@@ -20,7 +20,7 @@
 - 五步进度条的节点对齐、跨页面全宽约束与自动化回归测试
 - 主 Kuku 原始外观上的视觉目标眼神跟随
 - 本地视觉/voice Python 源码、UV 锁文件、模型、三段音频与测试
-- 一键启动前端与本地算法的 `npm run dev:local`
+- 一键启动前端与本地算法的 `npm run dev`（`dev:local` 保留为兼容别名）
 
 原项目目录中的文件保持不动。本交付包未收录与该任务无关的 `.DS_Store`、其他测试包、`.git`、`node_modules` 和运行缓存。
 
@@ -29,7 +29,7 @@
 ```bash
 npm install
 npm run local-ai:sync
-npm run dev:local
+npm run dev
 ```
 
 主界面：<http://127.0.0.1:4174>

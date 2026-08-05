@@ -11,14 +11,15 @@ the integrating kiosk host.
 ```bash
 make bootstrap
 make preflight
-make test
-make build
-make start
+npm run dev
 ```
 
-Open `http://127.0.0.1:8765`.
+Open `http://127.0.0.1:5173`. This starts the demo frontend and the local
+visual/voice backend together. If another Kuku development project already
+runs the backend on `127.0.0.1:8765`, it is reused.
 
-Use `VENDING_ATTENTION_PORT=9000 make start` to select another port. An
+Use `make start` for the packaged production-style server. Set
+`VENDING_ATTENTION_PORT=9000 make start` to select another port. An
 occupied port is rejected without touching the service already using it.
 
 Only the core flow is included: Live camera, anonymous face tracking, proximity,
